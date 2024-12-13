@@ -134,6 +134,7 @@ class PipelineExecutor:
                 fixed_code = await self.debugging_agent.debug_code(code, error_msg, context)
                 is_valid, verify_msg = await self.debugging_agent.verify_fix(error_msg, fixed_code)
                 fixed_code = fixed_code.replace("```python", "").replace("```", "").strip()
+                print(fixed_code,"고쳐진 코드")
                 if is_valid:
                     return fixed_code
                 else:
@@ -197,7 +198,9 @@ class MultiStepSystem:
         combined_code = await self._generate_code(step_descriptions)
         success, error_msg, results = await self.pipeline_executor.execute_pipeline(combined_code)
         if not success:
-            raise ValueError(f"Pipeline validation failed: {error_msg}")
+            print("Pipeline validation failed.")
+            return "Pipeline validation failed."
+        print("Pipeline validation succeeded.")
         return self._update_combined_code(combined_code, results)
 
     def _update_combined_code(self, original_code: str, results: List[Dict[str, Any]]) -> str:
@@ -222,12 +225,17 @@ async def main():
     api_key = os.environ.get("OPENAI_API_KEY")
     system = MultiStepSystem(api_key)
     step_descriptions = [
-        "make calculator function",
-        "make button function",
+        "Load model from storage or cloud service",  # 모델을 저장소나 클라우드에서 불러오기
+        "Initialize model with API key",             # API 키로 모델 초기화
+        "Verify model loaded successfully",          # 모델 로딩 성공 확인
+        "Create API endpoint to interact with model", # 모델과 상호작용할 API 엔드포인트 생성
+        "Test the API with sample requests",         # 샘플 요청으로 API 테스트
+        "Return final response from model",          # 모델에서 최종 응답 반환
     ]
     final_code = await system.process_steps(step_descriptions)
     with open("generated_pipeline.py", "w") as f:
         f.write(final_code)
+    print("Success" if "Pipeline validation succeeded" in final_code else "Failure")
 
 if __name__ == "__main__":
     asyncio.run(main())
